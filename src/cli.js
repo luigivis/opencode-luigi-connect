@@ -123,11 +123,11 @@ async function cmdInit() {
     if (install) {
       console.log('Installing OpenCode...');
       try {
-        execSync('curl -fsSL https://opencode.ai/install | sh', { stdio: 'inherit' });
+        execSync('curl -fsSL https://opencode.ai/install | bash', { stdio: 'inherit' });
         console.log(color('✓ OpenCode installed successfully', 'g'));
       } catch {
         console.log(color('✗ Failed to install OpenCode', 'r'));
-        console.log('Please install manually: curl -fsSL https://opencode.ai/install | sh');
+        console.log('Please install manually: curl -fsSL https://opencode.ai/install | bash');
         rl.close();
         process.exit(1);
       }
