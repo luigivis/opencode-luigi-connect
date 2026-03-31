@@ -27,6 +27,9 @@ function main() {
   }
 
   switch (command) {
+    case 'init':
+      cmdInit();
+      break;
     case 'add':
       cmdAdd();
       break;
@@ -60,6 +63,7 @@ function printHelp() {
   console.log('  opencode-luigi-connect <command>');
   console.log('');
   console.log(color('Commands:', 'bold'));
+  console.log('  ' + color('init', 'g') + '             Initialize everything (install OpenCode, remote-ctrl, and configure)');
   console.log('  ' + color('add', 'g') + '              Add Luigi Connect as OpenCode provider');
   console.log('  ' + color('list', 'g') + '            List configured providers');
   console.log('  ' + color('remove', 'g') + '          Remove Luigi Connect provider');
@@ -82,6 +86,153 @@ function printHelp() {
   console.log(color('After setup:', 'bold'));
   console.log('  Run ' + color('opencode', 'c') + ' and use ' + color('/models', 'c') + ' to select "Luigi Connect"');
   console.log('');
+}
+
+async function cmdInit() {
+  console.log('');
+  console.log(color('━━━ Initializing Luigi Connect Setup ━━━', 'bold'));
+  console.log('');
+
+  // Step 1: Check and install OpenCode
+  console.log(color('Step 1: OpenCode', 'bold'));
+  console.log('');
+  
+  if (isOpenCodeInstalled()) {
+    console.log(color('✓ OpenCode is already installed', 'g'));
+  } else {
+    console.log('OpenCode is not installed. Installing...');
+    try {
+      execSync('curl -fsSL https://opencode.ai/install | sh', { stdio: 'inherit' });
+      if (!isOpenCodeInstalled()) {
+        throw new Error('OpenCode installation failed');
+      }
+      console.log(color('✓ OpenCode installed successfully', 'g'));
+    } catch {
+      log('✗ Failed to install OpenCode', 'r');
+      console.log('Please install manually: curl -fsSL https://opencode.ai/install | sh');
+      process.exit(1);
+    }
+  }
+
+  // Step 2: Check and install opencode-remote-ctrl
+  console.log('');
+  console.log(color('Step 2: opencode-remote-ctrl', 'bold'));
+  console.log('');
+
+  if (isOpencodeRemoteCtrlInstalled()) {
+    console.log(color('✓ opencode-remote-ctrl is already installed', 'g'));
+  } else {
+    console.log('opencode-remote-ctrl is not installed. Installing...');
+    try {
+      execSync('npm install -g opencode-remote-ctrl', { stdio: 'inherit' });
+      if (!isOpencodeRemoteCtrlInstalled()) {
+        throw new Error('opencode-remote-ctrl installation failed');
+      }
+      console.log(color('✓ opencode-remote-ctrl installed successfully', 'g'));
+    } catch {
+      log('✗ Failed to install opencode-remote-ctrl', 'r');
+      console.log('Please install manually: npm install -g opencode-remote-ctrl');
+      process.exit(1);
+    }
+  }
+
+  // Step 2b: Tailscale check (handled by opencode-remote-ctrl, but we inform user)
+  console.log('');
+  console.log(color('Step 3: Tailscale', 'bold'));
+  console.log('');
+  console.log('opencode-remote-ctrl will check for Tailscale when you start it.');
+  console.log('If Tailscale is not installed, you will be prompted to install it.');
+  console.log('');
+
+  // Step 4: Ask for API key and configure
+  console.log(color('Step 4: Luigi Connect API Key', 'bold'));
+  console.log('');
+
+  let apiKey = '';
+  const apiKeyArg = args.find(arg => arg.startsWith('--api-key='));
+  if (apiKeyArg) {
+    apiKey = apiKeyArg.split('=')[1];
+  } else {
+    console.log('Please enter your Luigi Connect API key:');
+    console.log('(Contact luigivis98@gmail.com if you need one)');
+    console.log('');
+
+    const readline = await import('readline');
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    apiKey = await new Promise(resolve => {
+      rl.question(color('API Key: ', 'c'), answer => {
+        rl.close();
+        resolve(answer.trim());
+      });
+    });
+  }
+
+  if (!apiKey) {
+    log('API key is required', 'r');
+    console.log('Run: opencode-luigi-connect init --api-key=YOUR_KEY');
+    process.exit(1);
+  }
+
+  // Step 5: Configure Luigi Connect provider
+  console.log('');
+  console.log(color('Step 5: Configuring Luigi Connect provider', 'bold'));
+  console.log('');
+
+  try {
+    const models = await fetchModels(apiKey);
+
+    if (models.length === 0) {
+      log('No models found at the gateway', 'y');
+      process.exit(1);
+    }
+
+    console.log(color('✓', 'g') + ' Found ' + models.length + ' models');
+
+    addProviderConfig(apiKey, models);
+
+    console.log('');
+    console.log(color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'c'));
+    console.log(color('  ✓ Setup Complete!', 'g'));
+    console.log(color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'c'));
+    console.log('');
+    console.log(color('What was configured:', 'bold'));
+    console.log('  ✓ OpenCode AI assistant');
+    console.log('  ✓ opencode-remote-ctrl (web UI + Tailscale remote access)');
+    console.log('  ✓ Luigi Connect provider with ' + models.length + ' models');
+    console.log('');
+    console.log(color('Next steps:', 'bold'));
+    console.log('  1. Run ' + color('opencode-remote-ctrl start', 'c') + ' to start the web UI');
+    console.log('  2. Run ' + color('opencode', 'c') + ' to use the AI assistant');
+    console.log('  3. Access from phone via Tailscale IP on port 4096');
+    console.log('');
+    console.log(color('For support: luigivis98@gmail.com', 'gray'));
+    console.log('');
+  } catch (error) {
+    log('✗ Failed to configure provider: ' + error, 'r');
+    process.exit(1);
+  }
+}
+
+function isOpenCodeInstalled() {
+  try {
+    execSync('which opencode', { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isOpencodeRemoteCtrlInstalled() {
+  try {
+    execSync('which opencode-remote-ctrl', { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function cmdAdd() {
