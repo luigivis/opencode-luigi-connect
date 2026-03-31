@@ -36,6 +36,21 @@ The installer will:
 
 ## Usage
 
+### Quick Setup (Recommended)
+
+The easiest way to set everything up:
+
+```bash
+# One command to rule them all
+opencode-luigi-connect init --api-key=sk-your-key
+```
+
+This will:
+1. Install OpenCode if not present
+2. Install opencode-remote-ctrl if not present
+3. Configure Tailscale for remote access
+4. Set up the Luigi Connect provider
+
 ### Add Provider
 
 ```bash
