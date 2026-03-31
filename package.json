@@ -1,7 +1,12 @@
 {
   "name": "opencode-luigi-connect",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "CLI tool to configure api.chat.luigivis.com (LiteLLM) as a provider in OpenCode",
+  "homepage": "https://github.com/luigivis/opencode-luigi-connect#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/luigivis/opencode-luigi-connect"
+  },
   "type": "module",
   "bin": {
     "opencode-luigi-connect": "./dist/index.js"
