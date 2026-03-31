@@ -13,7 +13,12 @@ This tool connects your OpenCode installation to the Luigi Connect API gateway, 
 ## Installation
 
 ```bash
-npm install -g opencode-luigi-connect
+# Clone the repo
+git clone https://github.com/luigivis/opencode-luigi-connect.git
+cd opencode-luigi-connect
+
+# Run the installer (handles PATH automatically)
+./install.sh
 ```
 
 ## Usage
@@ -90,6 +95,49 @@ The tool configures OpenCode by:
 - [OpenCode](https://opencode.ai) installed
 - Node.js or Bun runtime
 - API key for api.chat.luigivis.com
+
+## Troubleshooting
+
+### "command not found" after installation
+
+If you get `opencode-luigi-connect: command not found` after installing with npm, your system's PATH doesn't include npm's global bin directory.
+
+**Solution:**
+
+1. Find where npm installs global binaries:
+   ```bash
+   npm config get prefix
+   ```
+
+2. Add the bin directory to your PATH. Add this line to `~/.bashrc` or `~/.zshrc`:
+   ```bash
+   export PATH="$(npm config get prefix)/bin:$PATH"
+   ```
+
+3. Reload your shell:
+   ```bash
+   source ~/.bashrc
+   ```
+
+**Alternative: Use npx**
+
+If the PATH issue persists, you can still use the tool without installation:
+```bash
+npx opencode-luigi-connect add --api-key=your-key
+```
+
+### npm with nvm
+
+If you're using nvm (Node Version Manager), you may see this warning:
+```
+Your user's .npmrc file has a `globalconfig` and/or a `prefix` setting, which are incompatible with nvm.
+```
+
+To fix:
+```bash
+nvm use --delete-prefix v24.14.0 --silent
+npm install -g opencode-luigi-connect --force
+```
 
 ## Support
 
