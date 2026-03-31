@@ -1,6 +1,6 @@
 {
   "name": "opencode-luigi-connect",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "CLI tool to configure api.chat.luigivis.com (LiteLLM) as a provider in OpenCode",
   "homepage": "https://github.com/luigivis/opencode-luigi-connect#readme",
   "repository": {
@@ -9,15 +9,7 @@
   },
   "type": "module",
   "bin": {
-    "opencode-luigi-connect": "./dist/index.js"
-  },
-  "scripts": {
-    "build": "bun build src/index.ts --outdir=dist --target=bun",
-    "dev": "bun run src/index.ts",
-    "add": "bun run src/index.ts add",
-    "list": "bun run src/index.ts list",
-    "remove": "bun run src/index.ts remove",
-    "set-default": "bun run src/index.ts set-default"
+    "opencode-luigi-connect": "./src/cli.js"
   },
   "keywords": [
     "opencode",
@@ -27,12 +19,7 @@
   ],
   "author": "luigivis",
   "license": "MIT",
-  "devDependencies": {
-    "@types/bun": "^1.0.0",
-    "typescript": "^5.3.0"
-  },
-  "dependencies": {
-    "chalk": "^5.3.0",
-    "zx": "^8.0.0"
+  "engines": {
+    "node": ">=16"
   }
 }

@@ -1,51 +1,54 @@
 #!/usr/bin/env bash
 set -e
 
-INSTALL_DIR="${HOME}/.local/bin"
+INSTALL_DIR="${HOME}/.local/lib/opencode-luigi-connect"
+BIN_LINK="${HOME}/.local/bin/opencode-luigi-connect"
 BIN_NAME="opencode-luigi-connect"
 
 echo ""
 echo "━━━ Installing ${BIN_NAME} ━━━"
 echo ""
 
-# Find bun - check common locations
-if command -v bun &> /dev/null; then
-    BUN_PATH="$(command -v bun)"
-elif [ -f "${HOME}/.bun/bin/bun" ]; then
-    BUN_PATH="${HOME}/.bun/bin/bun"
-elif [ -f "/usr/local/bin/bun" ]; then
-    BUN_PATH="/usr/local/bin/bun"
-elif [ -f "/usr/bin/bun" ]; then
-    BUN_PATH="/usr/bin/bun"
-else
-    echo "✗ Bun is not installed"
-    echo "  Install from: https://bun.sh"
+# Check if node is available
+if ! command -v node &> /dev/null; then
+    echo "✗ Node.js is not installed"
+    echo "  Install from: https://nodejs.org"
     exit 1
 fi
 
-echo "✓ Found bun at ${BUN_PATH}"
+NODE_PATH="$(command -v node)"
+echo "✓ Found Node.js at ${NODE_PATH}"
 
 # Create install directory
 mkdir -p "${INSTALL_DIR}"
 
-# Build the project
-echo "Building..."
+# Copy source files
 cd "$(dirname "$0")"
-bun install
-bun build src/index.ts --outdir=dist --target=bun
+cp -r src "${INSTALL_DIR}/"
 
-# Replace shebang with actual bun path
-sed -i "1s|#!/usr/bin/env bun|#!${BUN_PATH}|" dist/index.js
+# Create package.json
+cat > "${INSTALL_DIR}/package.json" << 'PKGJSON'
+{
+  "name": "opencode-luigi-connect",
+  "version": "1.1.0",
+  "type": "module"
+}
+PKGJSON
 
-# Copy binary
-cp dist/index.js "${INSTALL_DIR}/${BIN_NAME}"
-chmod +x "${INSTALL_DIR}/${BIN_NAME}"
+# Create bin symlink
+rm -f "${BIN_LINK}"
+cat > "${BIN_LINK}" << 'WRAPPER'
+#!/usr/bin/env bash
+exec node "$(dirname "$(readlink -f "$0")")/../lib/opencode-luigi-connect/src/cli.js" "$@"
+WRAPPER
+
+chmod +x "${BIN_LINK}"
 
 # Add to PATH if not already there
 BASHRC="${HOME}/.bashrc"
 ZSHRC="${HOME}/.zshrc"
 SHELL_RC=""
-PATH_LINE="export PATH=\"${INSTALL_DIR}:\$PATH\""
+PATH_LINE="export PATH=\"${HOME}/.local/bin:\$PATH\""
 
 # Detect which rc file to use
 if [ -f "$ZSHRC" ]; then
@@ -55,13 +58,13 @@ elif [ -f "$BASHRC" ]; then
 fi
 
 # Check if PATH line already exists
-if [ -n "$SHELL_RC" ] && ! grep -q "${INSTALL_DIR}" "$SHELL_RC" 2>/dev/null; then
+if [ -n "$SHELL_RC" ] && ! grep -q "${HOME}/.local/bin" "$SHELL_RC" 2>/dev/null; then
     echo "" >> "$SHELL_RC"
     echo "# Added by ${BIN_NAME}" >> "$SHELL_RC"
     echo "${PATH_LINE}" >> "$SHELL_RC"
-    echo "✓ Added ${INSTALL_DIR} to PATH in ${SHELL_RC}"
+    echo "✓ Added ~/.local/bin to PATH in ${SHELL_RC}"
 elif [ -n "$SHELL_RC" ]; then
-    echo "✓ ${INSTALL_DIR} already in PATH"
+    echo "✓ ~/.local/bin already in PATH"
 else
     echo "⚠ Could not find .bashrc or .zshrc"
     echo "  Please add this line to your shell config:"
@@ -71,7 +74,7 @@ fi
 echo ""
 echo "━━━ Installation Complete ━━━"
 echo ""
-echo "✓ ${BIN_NAME} installed to ${INSTALL_DIR}/${BIN_NAME}"
+echo "✓ ${BIN_NAME} installed to ${BIN_LINK}"
 echo ""
 echo "Next steps:"
 echo "  1. Run: source ~/.bashrc  (or open a new terminal)"
