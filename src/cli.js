@@ -93,58 +93,103 @@ async function cmdInit() {
   console.log(color('━━━ Initializing Luigi Connect Setup ━━━', 'bold'));
   console.log('');
 
-  // Step 1: Check and install OpenCode
+  const readline = await import('readline');
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  const ask = (question) => new Promise(resolve => {
+    rl.question(color(question + ': ', 'c'), answer => {
+      resolve(answer.trim());
+    });
+  });
+
+  const askYesNo = async (question, defaultYes = true) => {
+    const options = defaultYes ? '[Y/n]' : '[y/N]';
+    const answer = await ask(`${question} ${options}`);
+    if (answer === '') return defaultYes;
+    return answer.toLowerCase() === 'y';
+  };
+
+  // Step 1: OpenCode
   console.log(color('Step 1: OpenCode', 'bold'));
   console.log('');
   
   if (isOpenCodeInstalled()) {
     console.log(color('✓ OpenCode is already installed', 'g'));
   } else {
-    console.log('OpenCode is not installed. Installing...');
-    try {
-      execSync('curl -fsSL https://opencode.ai/install | sh', { stdio: 'inherit' });
-      if (!isOpenCodeInstalled()) {
-        throw new Error('OpenCode installation failed');
+    const install = await askYesNo('OpenCode is not installed. Install now?');
+    if (install) {
+      console.log('Installing OpenCode...');
+      try {
+        execSync('curl -fsSL https://opencode.ai/install | sh', { stdio: 'inherit' });
+        console.log(color('✓ OpenCode installed successfully', 'g'));
+      } catch {
+        console.log(color('✗ Failed to install OpenCode', 'r'));
+        console.log('Please install manually: curl -fsSL https://opencode.ai/install | sh');
+        rl.close();
+        process.exit(1);
       }
-      console.log(color('✓ OpenCode installed successfully', 'g'));
-    } catch {
-      log('✗ Failed to install OpenCode', 'r');
-      console.log('Please install manually: curl -fsSL https://opencode.ai/install | sh');
-      process.exit(1);
+    } else {
+      console.log('Skipping OpenCode installation.');
     }
   }
 
-  // Step 2: Check and install opencode-remote-ctrl
+  // Step 2: opencode-remote-ctrl
   console.log('');
-  console.log(color('Step 2: opencode-remote-ctrl', 'bold'));
+  console.log(color('Step 2: opencode-remote-ctrl (Web UI + Remote Access)', 'bold'));
   console.log('');
 
   if (isOpencodeRemoteCtrlInstalled()) {
     console.log(color('✓ opencode-remote-ctrl is already installed', 'g'));
   } else {
-    console.log('opencode-remote-ctrl is not installed. Installing...');
-    try {
-      execSync('npm install -g opencode-remote-ctrl', { stdio: 'inherit' });
-      if (!isOpencodeRemoteCtrlInstalled()) {
-        throw new Error('opencode-remote-ctrl installation failed');
+    const install = await askYesNo('opencode-remote-ctrl is not installed. Install now?');
+    if (install) {
+      console.log('Installing opencode-remote-ctrl...');
+      try {
+        execSync('npm install -g opencode-remote-ctrl', { stdio: 'inherit' });
+        console.log(color('✓ opencode-remote-ctrl installed successfully', 'g'));
+      } catch {
+        console.log(color('✗ Failed to install opencode-remote-ctrl', 'r'));
+        console.log('Please install manually: npm install -g opencode-remote-ctrl');
+        rl.close();
+        process.exit(1);
       }
-      console.log(color('✓ opencode-remote-ctrl installed successfully', 'g'));
-    } catch {
-      log('✗ Failed to install opencode-remote-ctrl', 'r');
-      console.log('Please install manually: npm install -g opencode-remote-ctrl');
-      process.exit(1);
+    } else {
+      console.log('Skipping opencode-remote-ctrl installation.');
     }
   }
 
-  // Step 2b: Tailscale check (handled by opencode-remote-ctrl, but we inform user)
+  // Step 3: Tailscale
   console.log('');
-  console.log(color('Step 3: Tailscale', 'bold'));
+  console.log(color('Step 3: Tailscale (for remote access)', 'bold'));
   console.log('');
-  console.log('opencode-remote-ctrl will check for Tailscale when you start it.');
-  console.log('If Tailscale is not installed, you will be prompted to install it.');
-  console.log('');
+  
+  const { isTailscaleInstalled, installTailscale } = await import('./tailscale.js');
+  
+  if (isTailscaleInstalled()) {
+    console.log(color('✓ Tailscale is already installed', 'g'));
+  } else {
+    const install = await askYesNo('Tailscale is not installed. Install now?');
+    if (install) {
+      console.log('Installing Tailscale...');
+      try {
+        execSync('curl -fsSL https://tailscale.com/install.sh | sh', { stdio: 'inherit' });
+        console.log(color('✓ Tailscale installed successfully', 'g'));
+      } catch {
+        console.log(color('✗ Failed to install Tailscale', 'r'));
+        console.log('Please install manually: curl -fsSL https://tailscale.com/install.sh | sh');
+        rl.close();
+        process.exit(1);
+      }
+    } else {
+      console.log('Skipping Tailscale installation.');
+    }
+  }
 
-  // Step 4: Ask for API key and configure
+  // Step 4: API Key
+  console.log('');
   console.log(color('Step 4: Luigi Connect API Key', 'bold'));
   console.log('');
 
@@ -156,37 +201,28 @@ async function cmdInit() {
     console.log('Please enter your Luigi Connect API key:');
     console.log('(Contact luigivis98@gmail.com if you need one)');
     console.log('');
-
-    const readline = await import('readline');
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-
-    apiKey = await new Promise(resolve => {
-      rl.question(color('API Key: ', 'c'), answer => {
-        rl.close();
-        resolve(answer.trim());
-      });
-    });
+    apiKey = await ask('API Key');
   }
 
   if (!apiKey) {
-    log('API key is required', 'r');
+    console.log(color('✗ API key is required', 'r'));
     console.log('Run: opencode-luigi-connect init --api-key=YOUR_KEY');
+    rl.close();
     process.exit(1);
   }
 
-  // Step 5: Configure Luigi Connect provider
+  // Step 5: Configure provider
   console.log('');
   console.log(color('Step 5: Configuring Luigi Connect provider', 'bold'));
   console.log('');
 
   try {
+    console.log('Fetching models from gateway...');
     const models = await fetchModels(apiKey);
 
     if (models.length === 0) {
-      log('No models found at the gateway', 'y');
+      console.log(color('⚠ No models found at the gateway', 'y'));
+      rl.close();
       process.exit(1);
     }
 
@@ -212,9 +248,12 @@ async function cmdInit() {
     console.log(color('For support: luigivis98@gmail.com', 'gray'));
     console.log('');
   } catch (error) {
-    log('✗ Failed to configure provider: ' + error, 'r');
+    console.log(color('✗ Failed to configure provider: ' + error, 'r'));
+    rl.close();
     process.exit(1);
   }
+
+  rl.close();
 }
 
 function isOpenCodeInstalled() {
