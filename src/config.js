@@ -49,15 +49,38 @@ export function saveAuthConfig(auth) {
   saveJsonFile(OPENCODE_AUTH_FILE, auth);
 }
 
+export const MODEL_METADATA = {
+  'luigi-high': {
+    context_window: 1000000,
+    input_cost_per_token: 0.000006,
+    output_cost_per_token: 0.000025,
+  },
+  'luigi-thinking': {
+    context_window: 200000,
+    input_cost_per_token: 0.000003,
+    output_cost_per_token: 0.000006,
+  },
+  'luigi-fast': {
+    context_window: 200000,
+    input_cost_per_token: 0.000003,
+    output_cost_per_token: 0.000006,
+  },
+  'luigi-ultra-think': {
+    context_window: 1000000,
+    input_cost_per_token: 0.000005,
+    output_cost_per_token: 0.000020,
+  },
+};
+
 export function addProviderConfig(apiKey, models) {
   const config = loadOpenCodeConfig();
-  
+
   if (!config.provider) {
     config.provider = {};
   }
 
   const providerName = getProviderName();
-  
+
   config.provider[providerName] = {
     npm: '@ai-sdk/openai-compatible',
     name: getProviderDisplayName(),
@@ -68,9 +91,21 @@ export function addProviderConfig(apiKey, models) {
   };
 
   for (const model of models) {
-    config.provider[providerName].models[model] = {
-      name: model,
-    };
+    const metadata = MODEL_METADATA[model];
+    const modelConfig = { name: model };
+
+    if (metadata) {
+      modelConfig.limit = {
+        context: metadata.context_window,
+        output: 32768,
+      };
+      modelConfig.cost = {
+        input: metadata.input_cost_per_token,
+        output: metadata.output_cost_per_token,
+      };
+    }
+
+    config.provider[providerName].models[model] = modelConfig;
   }
 
   saveOpenCodeConfig(config);
