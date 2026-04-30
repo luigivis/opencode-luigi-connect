@@ -54,21 +54,25 @@ export const MODEL_METADATA = {
     context_window: 1000000,
     input_cost_per_token: 0.000006,
     output_cost_per_token: 0.000025,
+    reasoning: true,
   },
   'luigi-thinking': {
     context_window: 200000,
     input_cost_per_token: 0.000003,
     output_cost_per_token: 0.000006,
+    reasoning: true,
   },
   'luigi-fast': {
     context_window: 200000,
     input_cost_per_token: 0.000003,
     output_cost_per_token: 0.000006,
+    reasoning: false,
   },
   'luigi-ultra-think': {
     context_window: 1000000,
     input_cost_per_token: 0.000005,
     output_cost_per_token: 0.000020,
+    reasoning: true,
   },
 };
 
@@ -103,6 +107,9 @@ export function addProviderConfig(apiKey, models) {
         input: metadata.input_cost_per_token,
         output: metadata.output_cost_per_token,
       };
+      if (metadata.reasoning !== undefined) {
+        modelConfig.reasoning = metadata.reasoning;
+      }
     }
 
     config.provider[providerName].models[model] = modelConfig;
